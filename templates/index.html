@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Catalan — Trading Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      padding: 2rem 1.5rem;
+    }
+
+    header {
+      display: flex;
+      align-items: baseline;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    #last-updated {
+      font-size: 0.78rem;
+      color: #8b949e;
+    }
+
+    #status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #3fb950;
+      margin-right: 6px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    #error-banner {
+      display: none;
+      background: #2d1b1b;
+      border: 1px solid #6e2c2c;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1.5rem;
+      color: #f85149;
+      font-size: 0.85rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+
+    .card-header h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .pnl-badge {
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.25rem 0.65rem;
+      border-radius: 20px;
+    }
+
+    .pnl-badge.positive {
+      background: #1a3a2a;
+      color: #3fb950;
+    }
+
+    .pnl-badge.negative {
+      background: #3a1a1a;
+      color: #f85149;
+    }
+
+    .pnl-badge.neutral {
+      background: #1f2937;
+      color: #8b949e;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.9rem 1.5rem;
+    }
+
+    .metric label {
+      display: block;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #8b949e;
+      margin-bottom: 0.2rem;
+    }
+
+    .metric .value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #e6edf3;
+    }
+
+    .metric .value.positive { color: #3fb950; }
+    .metric .value.negative { color: #f85149; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #21262d;
+      margin: 1.1rem 0;
+    }
+
+    .positions-row {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .positions-row .metric {
+      flex: 1;
+    }
+
+    .card.error-card {
+      border-color: #6e2c2c;
+      opacity: 0.7;
+    }
+
+    .card.error-card .error-msg {
+      font-size: 0.82rem;
+      color: #f85149;
+      margin-top: 0.5rem;
+    }
+
+    .skeleton .value {
+      background: #21262d;
+      border-radius: 4px;
+      color: transparent;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Catalan Trading Dashboard</h1>
+    <span id="last-updated"><span id="status-dot"></span>Loading...</span>
+  </header>
+
+  <div id="error-banner"></div>
+  <div id="grid" class="grid"></div>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const lastUpdatedEl = document.getElementById('last-updated');
+    const errorBanner = document.getElementById('error-banner');
+
+    function fmt(n) {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+    }
+
+    function pnlClass(v) {
+      if (v > 0) return 'positive';
+      if (v < 0) return 'negative';
+      return 'neutral';
+    }
+
+    function pnlSign(v) {
+      return v > 0 ? '+' : '';
+    }
+
+    function renderCard(acct) {
+      if (acct.error) {
+        return `
+          <div class="card error-card">
+            <div class="card-header"><h2>${acct.name}</h2></div>
+            <p class="error-msg">Error: ${acct.error}</p>
+          </div>`;
+      }
+
+      const pnl = acct.daily_pnl;
+      const pct = acct.daily_pnl_pct;
+      const cls = pnlClass(pnl);
+
+      return `
+        <div class="card">
+          <div class="card-header">
+            <h2>${acct.name}</h2>
+            <span class="pnl-badge ${cls}">
+              ${pnlSign(pnl)}${fmt(pnl)} (${pnlSign(pct)}${pct.toFixed(2)}%)
+            </span>
+          </div>
+          <div class="metrics">
+            <div class="metric">
+              <label>Account Value</label>
+              <span class="value">${fmt(acct.account_value)}</span>
+            </div>
+            <div class="metric">
+              <label>Cash</label>
+              <span class="value">${fmt(acct.cash)}</span>
+            </div>
+            <div class="metric">
+              <label>Buying Power</label>
+              <span class="value">${fmt(acct.buying_power)}</span>
+            </div>
+            <div class="metric">
+              <label>Daily P&amp;L</label>
+              <span class="value ${cls}">${pnlSign(pnl)}${fmt(pnl)}</span>
+            </div>
+          </div>
+          <hr class="divider"/>
+          <div class="positions-row">
+            <div class="metric">
+              <label>Positions</label>
+              <span class="value">${acct.positions_total}</span>
+            </div>
+            <div class="metric">
+              <label>In Profit</label>
+              <span class="value positive">${acct.positions_profit}</span>
+            </div>
+            <div class="metric">
+              <label>In Loss</label>
+              <span class="value negative">${acct.positions_loss}</span>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    async function refresh() {
+      try {
+        const res = await fetch('/api/accounts');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        grid.innerHTML = data.accounts.map(renderCard).join('');
+        lastUpdatedEl.innerHTML = `<span id="status-dot"></span>Updated ${data.last_updated}`;
+        errorBanner.style.display = 'none';
+      } catch (e) {
+        errorBanner.textContent = `Failed to fetch data: ${e.message}`;
+        errorBanner.style.display = 'block';
+      }
+    }
+
+    refresh();
+    setInterval(refresh, 30000);
+  </script>
+</body>
+</html>
