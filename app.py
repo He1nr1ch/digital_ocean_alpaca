@@ -11,6 +11,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template
 from alpaca.trading.client import TradingClient
+from alpaca.data.historical import StockHistoricalDataClient
+from alpaca.data.requests import StockSnapshotRequest
 
 load_dotenv()
 
@@ -25,11 +27,28 @@ ACCOUNTS = {
         "key": os.getenv("API_KEY_VALYA"),
         "secret": os.getenv("API_SECRET_VALYA"),
     },
-    "EarlyBird": {
-        "key": os.getenv("API_KEY_EARLYBIRD"),
-        "secret": os.getenv("API_SECRET_EARLYBIRD"),
-    },
 }
+
+
+def fetch_spy_data() -> dict:
+    try:
+        client = StockHistoricalDataClient(os.getenv("API_KEY"), os.getenv("API_SECRET"))
+        snapshots = client.get_stock_snapshot(StockSnapshotRequest(symbol_or_symbols="SPY"))
+        snap = snapshots["SPY"]
+
+        price = float(snap.latest_trade.price)
+        prev_close = float(snap.prev_daily_bar.close)
+        change = price - prev_close
+        change_pct = (change / prev_close * 100) if prev_close else 0.0
+
+        return {
+            "price": round(price, 2),
+            "change": round(change, 2),
+            "change_pct": round(change_pct, 3),
+            "error": None,
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 
 def fetch_account_data(name: str, key: str, secret: str) -> dict:
@@ -79,6 +98,7 @@ def api_accounts():
 
     return jsonify({
         "accounts": results,
+        "spy": fetch_spy_data(),
         "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     })
 

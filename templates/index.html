@@ -156,6 +156,37 @@
       margin-top: 0.5rem;
     }
 
+    #spy-ticker {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.88rem;
+      margin-bottom: 2rem;
+    }
+
+    #spy-ticker .ticker-label {
+      font-weight: 700;
+      color: #8b949e;
+      letter-spacing: 0.5px;
+    }
+
+    #spy-ticker .ticker-price {
+      font-weight: 600;
+      color: #e6edf3;
+    }
+
+    #spy-ticker .ticker-change {
+      font-weight: 600;
+    }
+
+    #spy-ticker .ticker-change.positive { color: #3fb950; }
+    #spy-ticker .ticker-change.negative { color: #f85149; }
+    #spy-ticker .ticker-change.neutral  { color: #8b949e; }
+
     .skeleton .value {
       background: #21262d;
       border-radius: 4px;
@@ -176,12 +207,19 @@
   </header>
 
   <div id="error-banner"></div>
+  <div id="spy-ticker">
+    <span class="ticker-label">SPY</span>
+    <span class="ticker-price" id="spy-price">—</span>
+    <span class="ticker-change neutral" id="spy-change">—</span>
+  </div>
   <div id="grid" class="grid"></div>
 
   <script>
     const grid = document.getElementById('grid');
     const lastUpdatedEl = document.getElementById('last-updated');
     const errorBanner = document.getElementById('error-banner');
+    const spyPrice = document.getElementById('spy-price');
+    const spyChange = document.getElementById('spy-change');
 
     function fmt(n) {
       return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
@@ -263,6 +301,18 @@
         grid.innerHTML = data.accounts.map(renderCard).join('');
         lastUpdatedEl.innerHTML = `<span id="status-dot"></span>Updated ${data.last_updated}`;
         errorBanner.style.display = 'none';
+
+        const spy = data.spy;
+        if (spy && !spy.error) {
+          const cls = pnlClass(spy.change);
+          spyPrice.textContent = fmt(spy.price);
+          spyChange.textContent = `${pnlSign(spy.change)}${fmt(spy.change)} (${pnlSign(spy.change_pct)}${spy.change_pct.toFixed(2)}%)`;
+          spyChange.className = `ticker-change ${cls}`;
+        } else {
+          spyPrice.textContent = '—';
+          spyChange.textContent = spy?.error ?? 'unavailable';
+          spyChange.className = 'ticker-change neutral';
+        }
       } catch (e) {
         errorBanner.textContent = `Failed to fetch data: ${e.message}`;
         errorBanner.style.display = 'block';
