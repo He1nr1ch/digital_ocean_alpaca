@@ -67,6 +67,8 @@ def fetch_account_data(name: str, key: str, secret: str) -> dict:
 
         positions_profit = sum(1 for p in positions if float(p.unrealized_pl) > 0)
         positions_loss = sum(1 for p in positions if float(p.unrealized_pl) < 0)
+        positions_long = sum(1 for p in positions if p.side.value == "long")
+        positions_short = sum(1 for p in positions if p.side.value == "short")
 
         return {
             "name": name,
@@ -76,6 +78,8 @@ def fetch_account_data(name: str, key: str, secret: str) -> dict:
             "daily_pnl": round(daily_pnl, 2),
             "daily_pnl_pct": round(daily_pnl_pct, 3),
             "positions_total": len(positions),
+            "positions_long": positions_long,
+            "positions_short": positions_short,
             "positions_profit": positions_profit,
             "positions_loss": positions_loss,
             "error": None,
