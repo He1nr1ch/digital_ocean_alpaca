@@ -27,6 +27,10 @@ ACCOUNTS = {
         "key": os.getenv("API_KEY_VALYA"),
         "secret": os.getenv("API_SECRET_VALYA"),
     },
+    "Outliers": {
+        "key": os.getenv("API_KEY_OUTLIERS"),
+        "secret": os.getenv("API_SECRET_OUTLIERS"),
+    },
 }
 
 
