@@ -37,7 +37,7 @@ def fetch_spy_data() -> dict:
         snap = snapshots["SPY"]
 
         price = float(snap.latest_trade.price)
-        prev_close = float(snap.prev_daily_bar.close)
+        prev_close = float(snap.previous_daily_bar.close)
         change = price - prev_close
         change_pct = (change / prev_close * 100) if prev_close else 0.0
 
