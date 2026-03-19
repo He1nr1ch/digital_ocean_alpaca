@@ -187,6 +187,60 @@
     #spy-ticker .ticker-change.negative { color: #f85149; }
     #spy-ticker .ticker-change.neutral  { color: #8b949e; }
 
+    .section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #8b949e;
+      margin: 2rem 0 0.75rem;
+    }
+
+    .sector-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.65rem;
+    }
+
+    .sector-tile {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .sector-tile .s-symbol {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #8b949e;
+    }
+
+    .sector-tile .s-name {
+      font-size: 0.72rem;
+      color: #6e7681;
+    }
+
+    .sector-tile .s-price {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e6edf3;
+      margin-top: 0.35rem;
+    }
+
+    .sector-tile .s-change {
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .sector-tile .s-change.positive { color: #3fb950; }
+    .sector-tile .s-change.negative { color: #f85149; }
+    .sector-tile .s-change.neutral  { color: #8b949e; }
+
+    .sector-tile.positive { border-color: #1a3a2a; }
+    .sector-tile.negative { border-color: #3a1a1a; }
+
     .skeleton .value {
       background: #21262d;
       border-radius: 4px;
@@ -207,6 +261,7 @@
   </header>
 
   <div id="error-banner"></div>
+
   <div id="spy-ticker">
     <span class="ticker-label">SPY</span>
     <span class="ticker-price" id="spy-price">—</span>
@@ -220,8 +275,12 @@
   </div>
   <div id="grid" class="grid"></div>
 
+  <p class="section-title">Sector Performance — SPDR ETFs</p>
+  <div id="sector-grid" class="sector-grid"></div>
+
   <script>
     const grid = document.getElementById('grid');
+    const sectorGrid = document.getElementById('sector-grid');
     const lastUpdatedEl = document.getElementById('last-updated');
     const errorBanner = document.getElementById('error-banner');
     const spyPrice = document.getElementById('spy-price');
@@ -333,6 +392,26 @@
 
         renderTicker(data.spy, spyPrice, spyChange);
         renderTicker(data.iwm, iwmPrice, iwmChange);
+
+        if (data.sectors && data.sectors.length) {
+          sectorGrid.innerHTML = data.sectors.map(s => {
+            if (s.error) {
+              return `<div class="sector-tile">
+                <span class="s-symbol">${s.symbol}</span>
+                <span class="s-name">${s.name}</span>
+                <span class="s-price">—</span>
+                <span class="s-change neutral">${s.error}</span>
+              </div>`;
+            }
+            const cls = pnlClass(s.change_pct);
+            return `<div class="sector-tile ${cls}">
+              <span class="s-symbol">${s.symbol}</span>
+              <span class="s-name">${s.name}</span>
+              <span class="s-price">${fmt(s.price)}</span>
+              <span class="s-change ${cls}">${pnlSign(s.change_pct)}${s.change_pct.toFixed(2)}%</span>
+            </div>`;
+          }).join('');
+        }
       } catch (e) {
         errorBanner.textContent = `Failed to fetch data: ${e.message}`;
         errorBanner.style.display = 'block';

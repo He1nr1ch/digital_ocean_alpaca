@@ -52,17 +52,47 @@ def _snapshot_to_dict(snap) -> dict:
     }
 
 
+SECTORS = [
+    ("XLK",  "Technology"),
+    ("XLF",  "Financials"),
+    ("XLV",  "Health Care"),
+    ("XLY",  "Cons. Discretionary"),
+    ("XLP",  "Cons. Staples"),
+    ("XLI",  "Industrials"),
+    ("XLE",  "Energy"),
+    ("XLC",  "Communication"),
+    ("XLB",  "Materials"),
+    ("XLRE", "Real Estate"),
+    ("XLU",  "Utilities"),
+]
+
+SECTOR_SYMBOLS = [s[0] for s in SECTORS]
+
+
 def fetch_ticker_data() -> dict:
     try:
         client = StockHistoricalDataClient(os.getenv("API_KEY"), os.getenv("API_SECRET"))
-        snapshots = client.get_stock_snapshot(StockSnapshotRequest(symbol_or_symbols=["SPY", "IWM"]))
+        all_symbols = ["SPY", "IWM"] + SECTOR_SYMBOLS
+        snapshots = client.get_stock_snapshot(StockSnapshotRequest(symbol_or_symbols=all_symbols))
+
+        sectors = []
+        for symbol, name in SECTORS:
+            if symbol in snapshots:
+                entry = _snapshot_to_dict(snapshots[symbol])
+            else:
+                entry = {"error": "no data"}
+            entry["symbol"] = symbol
+            entry["name"] = name
+            sectors.append(entry)
+
         return {
             "spy": _snapshot_to_dict(snapshots["SPY"]),
             "iwm": _snapshot_to_dict(snapshots["IWM"]),
+            "sectors": sectors,
         }
     except Exception as e:
         err = {"error": str(e)}
-        return {"spy": err, "iwm": err}
+        return {"spy": err, "iwm": err, "sectors": []}
 
 
 def fetch_account_data(name: str, key: str, secret: str) -> dict:
@@ -119,6 +149,7 @@ def api_accounts():
         "accounts": results,
         "spy": tickers["spy"],
         "iwm": tickers["iwm"],
+        "sectors": tickers["sectors"],
         "last_updated": datetime.now(pytz.timezone("America/New_York")).strftime("%Y-%m-%d %H:%M:%S ET"),
     })
 
