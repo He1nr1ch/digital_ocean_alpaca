@@ -156,7 +156,7 @@
       margin-top: 0.5rem;
     }
 
-    #spy-ticker {
+    #spy-ticker, #iwm-ticker {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
@@ -212,6 +212,12 @@
     <span class="ticker-price" id="spy-price">—</span>
     <span class="ticker-change neutral" id="spy-change">—</span>
   </div>
+  <div id="iwm-ticker">
+    <span class="ticker-label">IWM</span>
+    <span style="font-size:0.75rem;color:#8b949e;">Russell 2K</span>
+    <span class="ticker-price" id="iwm-price">—</span>
+    <span class="ticker-change neutral" id="iwm-change">—</span>
+  </div>
   <div id="grid" class="grid"></div>
 
   <script>
@@ -220,6 +226,8 @@
     const errorBanner = document.getElementById('error-banner');
     const spyPrice = document.getElementById('spy-price');
     const spyChange = document.getElementById('spy-change');
+    const iwmPrice = document.getElementById('iwm-price');
+    const iwmChange = document.getElementById('iwm-change');
 
     function fmt(n) {
       return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
@@ -310,17 +318,21 @@
         lastUpdatedEl.innerHTML = `<span id="status-dot"></span>Updated ${data.last_updated}`;
         errorBanner.style.display = 'none';
 
-        const spy = data.spy;
-        if (spy && !spy.error) {
-          const cls = pnlClass(spy.change);
-          spyPrice.textContent = fmt(spy.price);
-          spyChange.textContent = `${pnlSign(spy.change)}${fmt(spy.change)} (${pnlSign(spy.change_pct)}${spy.change_pct.toFixed(2)}%)`;
-          spyChange.className = `ticker-change ${cls}`;
-        } else {
-          spyPrice.textContent = '—';
-          spyChange.textContent = spy?.error ?? 'unavailable';
-          spyChange.className = 'ticker-change neutral';
+        function renderTicker(data, priceEl, changeEl) {
+          if (data && !data.error) {
+            const cls = pnlClass(data.change);
+            priceEl.textContent = fmt(data.price);
+            changeEl.textContent = `${pnlSign(data.change)}${fmt(data.change)} (${pnlSign(data.change_pct)}${data.change_pct.toFixed(2)}%)`;
+            changeEl.className = `ticker-change ${cls}`;
+          } else {
+            priceEl.textContent = '—';
+            changeEl.textContent = data?.error ?? 'unavailable';
+            changeEl.className = 'ticker-change neutral';
+          }
         }
+
+        renderTicker(data.spy, spyPrice, spyChange);
+        renderTicker(data.iwm, iwmPrice, iwmChange);
       } catch (e) {
         errorBanner.textContent = `Failed to fetch data: ${e.message}`;
         errorBanner.style.display = 'block';

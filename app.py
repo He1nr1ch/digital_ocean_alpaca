@@ -31,28 +31,37 @@ ACCOUNTS = {
         "key": os.getenv("API_KEY_OUTLIERS"),
         "secret": os.getenv("API_SECRET_OUTLIERS"),
     },
+    "RUSS2K": {
+        "key": os.getenv("API_KEY_RUSS2K"),
+        "secret": os.getenv("API_SECRET_RUSS2K"),
+    },
 }
 
 
-def fetch_spy_data() -> dict:
+def _snapshot_to_dict(snap) -> dict:
+    price = float(snap.latest_trade.price)
+    prev_close = float(snap.previous_daily_bar.close)
+    change = price - prev_close
+    change_pct = (change / prev_close * 100) if prev_close else 0.0
+    return {
+        "price": round(price, 2),
+        "change": round(change, 2),
+        "change_pct": round(change_pct, 3),
+        "error": None,
+    }
+
+
+def fetch_ticker_data() -> dict:
     try:
         client = StockHistoricalDataClient(os.getenv("API_KEY"), os.getenv("API_SECRET"))
-        snapshots = client.get_stock_snapshot(StockSnapshotRequest(symbol_or_symbols="SPY"))
-        snap = snapshots["SPY"]
-
-        price = float(snap.latest_trade.price)
-        prev_close = float(snap.previous_daily_bar.close)
-        change = price - prev_close
-        change_pct = (change / prev_close * 100) if prev_close else 0.0
-
+        snapshots = client.get_stock_snapshot(StockSnapshotRequest(symbol_or_symbols=["SPY", "IWM"]))
         return {
-            "price": round(price, 2),
-            "change": round(change, 2),
-            "change_pct": round(change_pct, 3),
-            "error": None,
+            "spy": _snapshot_to_dict(snapshots["SPY"]),
+            "iwm": _snapshot_to_dict(snapshots["IWM"]),
         }
     except Exception as e:
-        return {"error": str(e)}
+        err = {"error": str(e)}
+        return {"spy": err, "iwm": err}
 
 
 def fetch_account_data(name: str, key: str, secret: str) -> dict:
@@ -104,9 +113,11 @@ def api_accounts():
         data = fetch_account_data(name, creds["key"], creds["secret"])
         results.append(data)
 
+    tickers = fetch_ticker_data()
     return jsonify({
         "accounts": results,
-        "spy": fetch_spy_data(),
+        "spy": tickers["spy"],
+        "iwm": tickers["iwm"],
         "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     })
 
