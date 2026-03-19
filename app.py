@@ -7,6 +7,7 @@ API keys are read server-side from .env and never exposed to the client.
 
 import os
 from datetime import datetime
+import pytz
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template
@@ -118,7 +119,7 @@ def api_accounts():
         "accounts": results,
         "spy": tickers["spy"],
         "iwm": tickers["iwm"],
-        "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "last_updated": datetime.now(pytz.timezone("America/New_York")).strftime("%Y-%m-%d %H:%M:%S ET"),
     })
 
 
