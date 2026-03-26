@@ -5,10 +5,14 @@ Serves account metrics from Alpaca (paper trading).
 API keys are read server-side from .env and never exposed to the client.
 """
 
+import json
 import os
 from datetime import datetime
-import pytz
+from pathlib import Path
 
+import pytz
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template
 from alpaca.trading.client import TradingClient
@@ -132,9 +136,61 @@ def fetch_account_data(name: str, key: str, secret: str) -> dict:
         return {"name": name, "error": str(e)}
 
 
+HISTORY_FILE = Path("data/history.json")
+
+
+def load_history() -> dict:
+    if HISTORY_FILE.exists():
+        with open(HISTORY_FILE) as f:
+            return json.load(f)
+    return {name: [] for name in ACCOUNTS}
+
+
+def save_history(history: dict) -> None:
+    HISTORY_FILE.parent.mkdir(exist_ok=True)
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=2)
+
+
+def record_snapshot() -> None:
+    ny = pytz.timezone("America/New_York")
+    today = datetime.now(ny).strftime("%Y-%m-%d")
+    history = load_history()
+    changed = False
+    for name, creds in ACCOUNTS.items():
+        entries = history.setdefault(name, [])
+        if any(e["date"] == today for e in entries):
+            continue
+        data = fetch_account_data(name, creds["key"], creds["secret"])
+        if data.get("error"):
+            continue
+        entries.append({
+            "date": today,
+            "account_value": data["account_value"],
+            "daily_pnl": data["daily_pnl"],
+        })
+        changed = True
+    if changed:
+        save_history(history)
+
+
+_scheduler = BackgroundScheduler(timezone=pytz.timezone("America/New_York"))
+_scheduler.add_job(
+    record_snapshot,
+    CronTrigger(day_of_week="mon-fri", hour=16, minute=1,
+                timezone=pytz.timezone("America/New_York")),
+)
+_scheduler.start()
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/api/history")
+def api_history():
+    return jsonify(load_history())
 
 
 @app.route("/api/accounts")
