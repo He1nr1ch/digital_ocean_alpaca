@@ -108,21 +108,21 @@ def fetch_account_data(name: str, key: str, secret: str) -> dict:
         account = client.get_account()
         positions = client.get_all_positions()
 
-        equity = float(account.equity)
-        last_equity = float(account.last_equity)
+        equity = float(account.equity or 0)
+        last_equity = float(account.last_equity or 0)
         daily_pnl = equity - last_equity
         daily_pnl_pct = (daily_pnl / last_equity * 100) if last_equity else 0.0
 
-        positions_profit = sum(1 for p in positions if float(p.unrealized_pl) > 0)
-        positions_loss = sum(1 for p in positions if float(p.unrealized_pl) < 0)
+        positions_profit = sum(1 for p in positions if float(p.unrealized_pl or 0) > 0)
+        positions_loss = sum(1 for p in positions if float(p.unrealized_pl or 0) < 0)
         positions_long = sum(1 for p in positions if p.side.value == "long")
         positions_short = sum(1 for p in positions if p.side.value == "short")
 
         return {
             "name": name,
             "account_value": round(equity, 2),
-            "buying_power": round(float(account.buying_power), 2),
-            "cash": round(float(account.cash), 2),
+            "buying_power": round(float(account.buying_power or 0), 2),
+            "cash": round(float(account.cash or 0), 2),
             "daily_pnl": round(daily_pnl, 2),
             "daily_pnl_pct": round(daily_pnl_pct, 3),
             "positions_total": len(positions),
