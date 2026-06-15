@@ -138,6 +138,20 @@ def fetch_account_data(name: str, key: str, secret: str) -> dict:
 
 HISTORY_FILE = Path("data/history.json")
 
+# Reserved (non-account) history key holding the S&P 500 daily % change,
+# used as the benchmark in the comparison charts.
+SPY_HISTORY_KEY = "__SPY__"
+
+
+def fetch_spy_change_pct():
+    """Return SPY's daily % change for the benchmark, or None on failure."""
+    try:
+        client = StockHistoricalDataClient(os.getenv("API_KEY"), os.getenv("API_SECRET"))
+        snapshots = client.get_stock_snapshot(StockSnapshotRequest(symbol_or_symbols=["SPY"]))
+        return _snapshot_to_dict(snapshots["SPY"])["change_pct"]
+    except Exception:
+        return None
+
 
 def load_history() -> dict:
     if HISTORY_FILE.exists():
@@ -168,8 +182,17 @@ def record_snapshot() -> None:
             "date": today,
             "account_value": data["account_value"],
             "daily_pnl": data["daily_pnl"],
+            "daily_pnl_pct": data["daily_pnl_pct"],
         })
         changed = True
+
+    spy_entries = history.setdefault(SPY_HISTORY_KEY, [])
+    if not any(e["date"] == today for e in spy_entries):
+        pct = fetch_spy_change_pct()
+        if pct is not None:
+            spy_entries.append({"date": today, "change_pct": pct})
+            changed = True
+
     if changed:
         save_history(history)
 
