@@ -32,9 +32,9 @@ ACCOUNTS = {
         "key": os.getenv("API_KEY_VALYA"),
         "secret": os.getenv("API_SECRET_VALYA"),
     },
-    "Outliers": {
-        "key": os.getenv("API_KEY_OUTLIERS"),
-        "secret": os.getenv("API_SECRET_OUTLIERS"),
+    "Letterman": {
+        "key": os.getenv("API_KEY_LETTERMAN"),
+        "secret": os.getenv("API_SECRET_LETTERMAN"),
     },
     "RUSS2K": {
         "key": os.getenv("API_KEY_RUSS2K"),
